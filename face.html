@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Face Recognizer</title>
+    <script src="./face-api.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            position: absolute;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <video id="video" width="720" height="560" autoplay muted></video>
+        <pre id="subtext">A simple face recognizer, based on face-api.js. Referenced from <a href="https://github.com/WebDevSimplified/Face-Detection-JavaScript">this</a></pre>
+    </div>
+</body>
+
+<script type="text/javascript">
+    const video = document.getElementById('video')
+    Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+        faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+        faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+        faceapi.nets.faceExpressionNet.loadFromUri('/models')
+    ]).then(startVideo)
+
+    function startVideo(){
+        navigator.getUserMedia(
+            { video: {}},
+            stream => video.srcObject = stream,
+            err => document.getElementById('subtext').innerText='Please enable webcam access'
+        )
+    }
+    //startVideo()
+    video.addEventListener('play', ()=>{
+        const canvas = faceapi.createCanvasFromMedia(video)
+        document.body.append(canvas)
+        const displaySize = { width: video.width, height: video.height}
+        faceapi.matchDimensions(canvas, displaySize)
+        setInterval(async () => {
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+            .withFaceLandmarks().withFaceExpressions()
+            //console.log(detections)
+            const resizedDetections = faceapi.resizeResults(detections, displaySize)
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height)
+            faceapi.draw.drawDetections(canvas, resizedDetections)
+            faceapi.draw.drawFaceExpressions(canvas, resizedDetections)
+        }, 500)
+    })
+</script>
+</html>
